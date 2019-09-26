@@ -1,0 +1,124 @@
+---
+title: "DataViz"
+author: "Kevin S.W."
+date: "9/26/2019"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval = TRUE, warning = FALSE, message, FALSE)
+
+Packages <- c("tidyverse", "ggridges")
+invisible(lapply(Packages, library, character.only = TRUE))
+
+```
+
+# Data Viz 1
+Creating ggplot from weather data from NOAA
+
+## Loading weather data
+
+```{r weather_data, cache = TRUE}
+
+# Package interfaces with the weather station/service; interacts with NOAA servers and downloads the updated data
+weather_df = 
+  rnoaa::meteo_pull_monitors(c("USW00094728", "USC00519397", "USS0023B17S"), # Stations to download from
+                      var = c("PRCP", "TMIN", "TMAX"), # which variables i want
+                      date_min = "2017-01-01",     #range of dates min - max
+                      date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY", 
+                      USC00519397 = "Waikiki_HA",
+                      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+
+weather_df
+
+```
+
+## creating ggplot
+```{r}
+
+ggplot(weather_df, aes(x = tmin, y = tmax)) +
+  geom_point()
+
+# alternative way to make the plot:
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_point()
+
+#saving initial plots
+weather_df %>% filter(name == "CentralPark_NY") #without any variable assignments, this code will "print out" immediately.
+
+# if we want to save instead, we can assign a variable to it. i.e.
+scatter = weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_point()
+
+scatter
+```
+
+## Adding color to plot
+
+```{r}
+
+# Aesthetic maps can be added inside each "assignments" or just do it outside
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_point(aes(color = name), alpha = 0.4)
+  
+
+```
+
+## why does aes() positions matter?
+
+```{r}
+
+# if we add geom_smooth at the end...
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_point(aes(color = name), alpha = 0.4) +
+  geom_smooth(se = FALSE) # se = FALSE removes the "error bars" of the line plot
+
+
+# if we move the aes up to ggplot...
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(aes(alpha = 0.4)) +
+  geom_smooth(se = FALSE) 
+
+```
+
+by adding aes() inside the geom_point(), it only "applies" to those variables. If we put it into ggplot however, it will apply to everything.
+
+## facets!
+manipulating the data presentation beyond 1 graph
+```{r}
+
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(aes(alpha = 0.4)) +
+  geom_smooth(se = FALSE) +
+  facet_grid(~name) # the thing on the right side of the tilde, will be columns
+
+```
+
+## lets do more plotting
+```{r}
+
+# we can see temp changes over time
+weather_df %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) +
+  geom_point(aes(size = tmax), alpha = 0.3) +  # adding size = prcp into point changes the sizes based on the "intensity".
+  geom_smooth(se = FALSE)
+
+# or if we want to see precip
+weather_df %>% 
+  ggplot(aes(x = date, y = prcp, color = name)) +
+  geom_point() +  
+  geom_smooth(se = FALSE)
+
+```
+
