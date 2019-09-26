@@ -202,3 +202,139 @@ weather_df %>%
     ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
 
 ![](dataviz_practice_files/figure-gfm/unnamed-chunk-5-2.png)<!-- -->
+
+## Some extra stuff
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) +
+  geom_point(aes(size = tmax), alpha = 0.3) +  
+  geom_smooth(size = 2, se = FALSE)
+```
+
+    ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+
+## 2d density
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) +
+  geom_hex()
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+## more plots
+
+``` r
+## Examples of univariate plots (only x variable)
+
+# color actually only colors the "outlines".
+# so we need to use "fill ="
+weather_df %>% 
+  ggplot(aes(x = tmax, fill = name)) +  
+  geom_histogram(position = "dodge") #adding position = "dodge" allows the bars next to each other
+```
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+``` r
+# alternatively
+weather_df %>% 
+  ggplot(aes(x = tmax, fill = name)) +  
+  geom_histogram() +
+  facet_grid(~name)
+```
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
+
+``` r
+#density plot...
+weather_df %>% 
+  ggplot(aes(x = tmax, fill = name)) +  
+  geom_density(alpha = 0.3)
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-8-3.png)<!-- -->
+
+``` r
+# boxplots
+weather_df %>% 
+  ggplot(aes(x = name, y = tmax)) +  
+  geom_boxplot()
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-8-4.png)<!-- -->
+
+``` r
+# violin plots; usually you can see a "density" plot if you turn your head sideways
+weather_df %>% 
+  ggplot(aes(x = name, y = tmax)) +  
+  geom_violin()
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-8-5.png)<!-- -->
+
+``` r
+# ridge plots; useful when you have "lots" of datapoints
+weather_df %>% 
+  ggplot(aes(x = tmax, y = name)) +  
+  geom_density_ridges() # in ggridges
+```
+
+    ## Picking joint bandwidth of 1.84
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-8-6.png)<!-- -->
+
+# saving plots
+
+``` r
+# to save a plot; assign a name to it
+gg_ridge = 
+  weather_df %>% 
+  ggplot(aes(x = tmax, y = name)) +  
+  geom_density_ridges() # in ggridges
+
+# format is (filename; ie location of file, which plot). if location not specified, will be local folder
+ggsave("ggplot_temp_ridge.pdf", gg_ridge) 
+```
+
+    ## Saving 7 x 5 in image
+
+    ## Picking joint bandwidth of 1.84
+
+``` r
+# possible to do ggsave() as it assumes the last plot...but this is dangerous practice.
+```
+
+# regarding boxplots and figure dimensions in RMarkdown
+
+when specifying in the chunk the figure width…
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(aes(alpha = 0.4)) +
+  geom_smooth(se = FALSE)
+```
+
+    ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(aes(alpha = 0.4)) +
+  geom_smooth(se = FALSE)
+```
+
+    ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->

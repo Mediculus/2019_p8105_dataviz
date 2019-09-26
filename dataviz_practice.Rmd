@@ -181,3 +181,39 @@ weather_df %>%
   geom_density_ridges() # in ggridges
 
 ```
+
+# saving plots
+```{r}
+
+# to save a plot; assign a name to it
+gg_ridge = 
+  weather_df %>% 
+  ggplot(aes(x = tmax, y = name)) +  
+  geom_density_ridges() # in ggridges
+
+# format is (filename; ie location of file, which plot). if location not specified, will be local folder
+ggsave("ggplot_temp_ridge.pdf", gg_ridge) 
+
+# possible to do ggsave() as it assumes the last plot...but this is dangerous practice.
+
+```
+
+# regarding boxplots and figure dimensions in RMarkdown
+
+when specifying in the chunk the figure width (fig.width = ...) this sets the boundaries of the graph. The larger it is, the wider the boundaries.
+
+```{r, fig.width = 6}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(aes(alpha = 0.4)) +
+  geom_smooth(se = FALSE)
+
+```
+
+```{r, fig.width = 12}
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(aes(alpha = 0.4)) +
+  geom_smooth(se = FALSE)
+
+```
