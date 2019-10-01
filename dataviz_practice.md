@@ -315,12 +315,13 @@ ggsave("ggplot_temp_ridge.pdf", gg_ridge)
 
 # regarding boxplots and figure dimensions in RMarkdown
 
-when specifying in the chunk the figure width…
+when specifying in the chunk the figure width (fig.width = …) this sets
+the boundaries of the graph. The larger it is, the wider the boundaries.
 
 ``` r
 weather_df %>% 
   ggplot(aes(x = tmin, y = tmax, color = name)) + 
-  geom_point(aes(alpha = 0.4)) +
+  geom_point(aes(alpha = 0.4)) + 
   geom_smooth(se = FALSE)
 ```
 
@@ -338,3 +339,205 @@ weather_df %>%
     ## `geom_smooth()` using method = 'loess' and formula 'y ~ x'
 
 ![](dataviz_practice_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+
+# Data Viz II - ggplot more in depth
+
+``` r
+#caching saves the output into a certain code chunk...it's like "RAM". 
+
+weather_df = 
+  rnoaa::meteo_pull_monitors(c("USW00094728", "USC00519397", "USS0023B17S"), # Stations to download from
+                      var = c("PRCP", "TMIN", "TMAX"), # which variables i want
+                      date_min = "2017-01-01",     #range of dates min - max
+                      date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY", 
+                      USC00519397 = "Waikiki_HA",
+                      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+    ## Registered S3 method overwritten by 'crul':
+    ##   method                 from
+    ##   as.character.form_file httr
+
+    ## Registered S3 method overwritten by 'hoardr':
+    ##   method           from
+    ##   print.cache_info httr
+
+    ## file path:          /Users/NetQuarter/Library/Caches/rnoaa/ghcnd/USW00094728.dly
+
+    ## file last updated:  2019-09-26 10:25:18
+
+    ## file min/max dates: 1869-01-01 / 2019-09-30
+
+    ## file path:          /Users/NetQuarter/Library/Caches/rnoaa/ghcnd/USC00519397.dly
+
+    ## file last updated:  2019-09-26 10:25:29
+
+    ## file min/max dates: 1965-01-01 / 2019-09-30
+
+    ## file path:          /Users/NetQuarter/Library/Caches/rnoaa/ghcnd/USS0023B17S.dly
+
+    ## file last updated:  2019-09-26 10:25:33
+
+    ## file min/max dates: 1999-09-01 / 2019-09-30
+
+``` r
+weather_df
+```
+
+    ## # A tibble: 1,095 x 6
+    ##    name           id          date        prcp  tmax  tmin
+    ##    <chr>          <chr>       <date>     <dbl> <dbl> <dbl>
+    ##  1 CentralPark_NY USW00094728 2017-01-01     0   8.9   4.4
+    ##  2 CentralPark_NY USW00094728 2017-01-02    53   5     2.8
+    ##  3 CentralPark_NY USW00094728 2017-01-03   147   6.1   3.9
+    ##  4 CentralPark_NY USW00094728 2017-01-04     0  11.1   1.1
+    ##  5 CentralPark_NY USW00094728 2017-01-05     0   1.1  -2.7
+    ##  6 CentralPark_NY USW00094728 2017-01-06    13   0.6  -3.8
+    ##  7 CentralPark_NY USW00094728 2017-01-07    81  -3.2  -6.6
+    ##  8 CentralPark_NY USW00094728 2017-01-08     0  -3.8  -8.8
+    ##  9 CentralPark_NY USW00094728 2017-01-09     0  -4.9  -9.9
+    ## 10 CentralPark_NY USW00094728 2017-01-10     0   7.8  -6  
+    ## # … with 1,085 more rows
+
+## making new plots
+
+start with an old plot
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5)
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+then we add labels using labs()…
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temp plot",
+    x = "min temp in C",
+    y = "max temp in C",
+    caption = "data from NOAA via rnoaa package"
+  )
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+then we can adjust its scales. The form is scale\_\* , such as x-axis
+tick marks, etc
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temp plot",
+    x = "min temp in C",
+    y = "max temp in C",
+    caption = "data from NOAA via rnoaa package") +
+  scale_x_continuous(
+    breaks = c(-15,-5,20),   # x-axis "tick marks" (the guide ticks)
+    labels = c("-15C", "-5", "-20")) +  # to change those specific "labels"
+# transforms datapoint to be the "sqrt" of each points. alternatively you can have scale_y_sqrt()
+   scale_y_continuous(
+    trans = "sqrt")
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+## Colors\!\!
+
+Setting your own hues…
+
+``` r
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temp plot",
+    x = "min temp in C",
+    y = "max temp in C",
+    caption = "data from NOAA via rnoaa package") +
+  scale_color_hue(          # this is setting the hues of the color yourself
+    name = "Location",
+    h = c(50, 200)           # range of the hue to take
+  )
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+
+Or we can use `viridis` package. This is super useful because the
+gradients in the package are made with color-blindness and grayscales in
+mind (they still retain the gradient).
+
+``` r
+gg_base <- weather_df %>%    # making a baseline plot
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temp plot",
+    x = "min temp in C",
+    y = "max temp in C",
+    caption = "data from NOAA via rnoaa package") +
+  viridis::scale_color_viridis(
+    name = "Location",
+    discrete = TRUE
+  )
+```
+
+## Themes…
+
+themes() are “global” things that deal with the general things of the
+plot. Typically organizations
+
+``` r
+gg_base +
+  theme(
+    legend.position = "bottom"    # replaces the position of the legend
+  )
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+We can change the theme\_\*…such as theme\_bw()
+
+``` r
+gg_base +
+  theme_bw()+
+  theme(legend.position = "bottom")
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+or theme\_minimal()…
+
+NOTE: in ggplot, ORDER MATTERS\!\! i.e. applying general “themes” later
+will “reset” whatever granular modifications you did since it overrides
+prior commands.
+
+Themes are recommended to be applied first before adjusting anything
+else. Check `ggthemes` for more themes.
+
+``` r
+gg_base +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+![](dataviz_practice_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+
+you can add the code below at the top along with the initial code chunk
+in order to set it globally
+
+``` r
+theme_set(theme_bw() + theme(legend.position = "bottom"))
+```

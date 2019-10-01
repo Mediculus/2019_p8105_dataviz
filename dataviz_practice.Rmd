@@ -205,7 +205,7 @@ when specifying in the chunk the figure width (fig.width = ...) this sets the bo
 ```{r, fig.width = 6}
 weather_df %>% 
   ggplot(aes(x = tmin, y = tmax, color = name)) + 
-  geom_point(aes(alpha = 0.4)) +
+  geom_point(aes(alpha = 0.4)) + 
   geom_smooth(se = FALSE)
 
 ```
@@ -217,3 +217,158 @@ weather_df %>%
   geom_smooth(se = FALSE)
 
 ```
+
+# Data Viz II - ggplot more in depth
+
+```{r weather_data2, cache = TRUE}
+
+#caching saves the output into a certain code chunk...it's like "RAM". 
+
+weather_df = 
+  rnoaa::meteo_pull_monitors(c("USW00094728", "USC00519397", "USS0023B17S"), # Stations to download from
+                      var = c("PRCP", "TMIN", "TMAX"), # which variables i want
+                      date_min = "2017-01-01",     #range of dates min - max
+                      date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY", 
+                      USC00519397 = "Waikiki_HA",
+                      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+
+weather_df
+
+```
+
+## making new plots
+
+start with an old plot
+
+```{r}
+
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5)
+
+```
+
+then we add labels using labs()...
+
+```{r}
+
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temp plot",
+    x = "min temp in C",
+    y = "max temp in C",
+    caption = "data from NOAA via rnoaa package"
+  )
+
+```
+
+then we can adjust its scales. The form is scale_*  , such as x-axis tick marks, etc
+
+```{r}
+
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temp plot",
+    x = "min temp in C",
+    y = "max temp in C",
+    caption = "data from NOAA via rnoaa package") +
+  scale_x_continuous(
+    breaks = c(-15,-5,20),   # x-axis "tick marks" (the guide ticks)
+    labels = c("-15C", "-5", "-20")) +  # to change those specific "labels"
+# transforms datapoint to be the "sqrt" of each points. alternatively you can have scale_y_sqrt()
+   scale_y_continuous(
+    trans = "sqrt")
+
+```
+
+## Colors!!
+
+Setting your own hues...
+```{r}
+
+weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temp plot",
+    x = "min temp in C",
+    y = "max temp in C",
+    caption = "data from NOAA via rnoaa package") +
+  scale_color_hue(          # this is setting the hues of the color yourself
+    name = "Location",
+    h = c(50, 200)           # range of the hue to take
+  )
+  
+```
+
+Or we can use `viridis` package.
+This is super useful because the gradients in the package are made with color-blindness and grayscales in mind (they still retain the gradient).
+
+```{r}
+
+gg_base <- weather_df %>%    # making a baseline plot
+  ggplot(aes(x = tmin, y = tmax, color = name)) + 
+  geom_point(alpha = .5) +
+  labs(
+    title = "Temp plot",
+    x = "min temp in C",
+    y = "max temp in C",
+    caption = "data from NOAA via rnoaa package") +
+  viridis::scale_color_viridis(
+    name = "Location",
+    discrete = TRUE
+  )
+```
+
+## Themes...
+themes() are "global" things that deal with the general things of the plot. Typically organizations
+
+```{r}
+
+gg_base +
+  theme(
+    legend.position = "bottom"    # replaces the position of the legend
+  )
+
+```
+
+We can change the theme_*...such as theme_bw()
+
+```{r}
+gg_base +
+  theme_bw()+
+  theme(legend.position = "bottom")
+```
+
+or theme_minimal()...
+
+NOTE: in ggplot, ORDER MATTERS!! i.e. applying general "themes" later will "reset" whatever granular modifications you did since it overrides prior commands.
+
+Themes are recommended to be applied first before adjusting anything else. Check `ggthemes` for more themes.
+
+```{r}
+
+gg_base +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+
+you can add the code below at the top along with the initial code chunk in order to set it globally
+
+```{r}
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
+
+```
+
