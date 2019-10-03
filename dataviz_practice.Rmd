@@ -6,11 +6,27 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, eval = TRUE, warning = FALSE, message, FALSE)
+knitr::opts_chunk$set(
+  echo = TRUE, 
+  eval = TRUE, 
+  warning = FALSE, 
+  message, FALSE,
+  fig.width = 8,
+  fig.height = 6,
+  out.width = "90%")
 
-Packages <- c("tidyverse", "ggridges", "hexbin")
+Packages <- c("tidyverse", "ggridges", "hexbin", "patchwork")
 invisible(lapply(Packages, library, character.only = TRUE))
 
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```
 
 # Data Viz 1
@@ -303,7 +319,7 @@ weather_df %>%
     x = "min temp in C",
     y = "max temp in C",
     caption = "data from NOAA via rnoaa package") +
-  scale_color_hue(          # this is setting the hues of the color yourself
+  scale_color_hue(         # this is setting the hues of the color yourself
     name = "Location",
     h = c(50, 200)           # range of the hue to take
   )
@@ -328,6 +344,19 @@ gg_base <- weather_df %>%    # making a baseline plot
     discrete = TRUE
   )
 ```
+
+more in depth about color...
+
+```{r}
+
+ggplot(aes(x = tmin, y = tmax, color = "red")) + 
+  geom_point(alpha = .5) +
+
+# adding "color =" in the ggplot...assigns that color to a specific variable.
+# if we just wants to change the color, then we have to specify it in the geom_* variables.
+  
+```
+
 
 ## Themes...
 themes() are "global" things that deal with the general things of the plot. Typically organizations
@@ -369,6 +398,327 @@ you can add the code below at the top along with the initial code chunk in order
 ```{r}
 
 theme_set(theme_bw() + theme(legend.position = "bottom"))
+
+```
+
+if you have more than one dataset, you could combine data sets with different forms as long as you specify/make data frames out separately...for example:
+```{r}
+
+central_park = 
+  weather_df %>% 
+  filter(name == "CentralPark_NY")
+
+waikiki = 
+  weather_df %>% 
+  filter(name == "Waikiki_HA")
+
+waikiki %>% 
+  ggplot(aes(x = date, y = tmax, color = name)) +
+  geom_point(aes(size = prcp)) +
+  geom_line(data = central_park)
+
+```
+
+## Multi-panel plots...
+
+Occasionally, you'd want to include different plots into the same "canvas". We can use patchwork...
+```{r}
+
+gg_scatter <-
+  weather_df %>% 
+  ggplot(aes(x = tmin, y = tmax)) +
+  geom_point()
+
+gg_density <-
+  weather_df %>% 
+  ggplot(aes(x = tmin)) +
+  geom_density()
+
+gg_box <-
+  weather_df %>% 
+  ggplot(aes(x = name, y = tmax, color = name)) +
+  geom_boxplot()
+
+# + adds the plot to the side, / adds below. order of the operations matter
+(gg_scatter + gg_density) / gg_box
+
+```
+
+## manipulating factor variables in ggplots...
+When it comes to boxplot, the variables will be dependent on factors. the order of the factors are by default, based on alphabetical ordering.
+```{r}
+
+weather_df %>% 
+  mutate(
+    name = factor(name),
+    name = fct_relevel(name, "Waikiki_HA", "CentralPark_NY")
+  ) %>% 
+  ggplot(aes(x = name, y = tmax, color = name)) +
+  geom_boxplot()
+
+
+
+```
+
+
+reorder...
+```{r}
+
+weather_df %>% 
+  mutate(
+    name = factor(name),
+    name = fct_reorder(name, tmax) # reorders according to the y variable
+  ) %>% 
+  ggplot(aes(x = name, y = tmax, color = name)) +
+  geom_boxplot()
+
+```
+
+so in this case, since waterhole's tmax are the lowest, it automatically becomes the first "factor". 
+
+
+## making multiple plots with the same variables and keeping consistency between...
+
+first, we have to restructure then plot...
+
+i.e. if we try to make 3 separate density plots with the same variables and separation of "factors"...
+```{r}
+weather_df %>% 
+  pivot_longer(
+    tmax:tmin,
+    names_to = "observation",
+    values_to = "temperature"
+  ) %>% 
+  ggplot(aes(x = temperature, fill = observation)) +
+  geom_density(alpha = 0.3) +
+  facet_grid(~name) +  # splits the graph by name; left ~ right -> left = vert_split, right = hor_split
+  theme(legend.position = "bottom")
+
+```
+
+another example with FAS_pups dataset...
+
+```{r}
+
+pup_data = 
+  read_csv("./data/FAS_pups.csv", col_types = "ciiiii") %>%
+  janitor::clean_names() %>%
+  mutate(sex = recode(sex, `1` = "male", `2` = "female")) 
+
+litter_data = 
+  read_csv("./data/FAS_litters.csv", col_types = "ccddiiii") %>%
+  janitor::clean_names() %>%
+  select(-pups_survive) %>%
+  separate(group, into = c("dose", "day_of_tx"), sep = 3) %>%
+  mutate(wt_gain = gd18_weight - gd0_weight,
+         day_of_tx = as.numeric(day_of_tx))
+
+fas_data = left_join(pup_data, litter_data, by = "litter_number") 
+
+fas_data %>% 
+  select(sex, dose, day_of_tx, pd_ears:pd_walk) %>% 
+  pivot_longer(
+    pd_ears:pd_walk,
+    names_to = "outcome", 
+    values_to = "pn_day") %>% 
+  drop_na() %>% 
+  mutate(outcome = forcats::fct_reorder(outcome, day_of_tx, median)) %>% 
+  ggplot(aes(x = dose, y = pn_day)) + 
+  geom_violin() + 
+  facet_grid(day_of_tx ~ outcome)
+
+```
+
+# DataViz III/Exploratory Data Analysis
+
+Moment where you mess with data and get a sense of your data. We can use group_by() or summarize(). Grouping doesn't change your data but it adds a layer on top of it. Summarize() gives 1-number summaries. You can also nest this, because if you start with group_by() and then summarize, the result is still a dataframe.
+
+**Warning**: exploratory analyses are considered secondary analyses as these are usually done by "poking around" the data. This is typically not pre-planned and therefore shouldn't be prioritized unless the primary purpose has been completed. 
+
+
+```{r loading_weather, cache = TRUE}
+
+weather_df = 
+  rnoaa::meteo_pull_monitors(c("USW00094728", "USC00519397", "USS0023B17S"),
+                      var = c("PRCP", "TMIN", "TMAX"), 
+                      date_min = "2017-01-01",
+                      date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY", 
+                      USC00519397 = "Waikiki_HA",
+                      USS0023B17S = "Waterhole_WA"),
+    tmin = tmin / 10,
+    tmax = tmax / 10,
+    month = lubridate::floor_date(date, unit = "month")) %>% 
+    # this is rounding down date to the beginning of its month
+  select(name, id, date, month, everything())
+
+```
+
+## Group_by and counting things
+
+```{r}
+
+# it will look the same, but now if we check the weather_df, there is "Groups: name, month [total groups]
+weather_df %>% 
+  group_by(name, month)
+
+# counting
+
+weather_df %>% 
+  group_by(month, name) %>% 
+  summarize(n_obs = n()) # n() just counts; assigned to a new column and makes a new column
+
+weather_df %>% 
+  group_by(month) %>% 
+  summarize(n_obs = n())
+
+weather_df %>% 
+  group_by(name) %>% 
+  summarize(n_obs = n())
+
+
+weather_df %>% 
+  group_by(month) %>% 
+  summarize(n_obs = n(),
+            n_unique = n_distinct(date)) # adding n_distinct "counts" the distinct dates
+
+```
+
+There are also other ways to count
+
+```{r}
+
+# instead of doing group_by then summarize, we can use count()
+weather_df %>% 
+  count(name)
+
+weather_df %>% 
+  count(name, month)  # by doing name = "something", it will also assign a name for that "new column"
+
+
+# base R also has a counting function but this is horrible...
+# because this isn't a dataframe
+weather_df %>% 
+  pull(name) %>% 
+  table()
+
+```
+
+## digression...2x2 tables
+
+```{r}
+
+weather_df %>% 
+  filter(name != "Waikiki_HA") %>% 
+  mutate(
+    cold = case_when(            #case_when useful when you have new variables based on several prior variables 
+      tmax < 5 ~ "cold",
+      tmax >= 5 ~ "not cold",
+      TRUE ~ ""
+    )  
+  ) %>% # now we want to make 2x2 table
+  group_by(name, cold) %>% 
+  count() %>% 
+  pivot_wider(
+    names_from = "cold",
+    values_from = "n"
+  )
+
+
+# but there is another way to get this as well...
+# a note by jeff: if you need to find odds ratio...just use logistic regression
+weather_df %>% 
+  filter(name != "Waikiki_HA") %>% 
+  mutate(
+    cold = case_when(            #case_when useful when you have new variables based on several prior variables 
+      tmax < 5 ~ "cold",
+      tmax >= 5 ~ "not cold",
+      TRUE ~ ""
+    )  
+  ) %>%
+  janitor::tabyl(name, cold)
+
+```
+
+## general summaries
+
+```{r}
+
+weather_df %>% 
+  group_by(name, month) %>% 
+  summarize(
+    n = n(),
+    mean_tmax = mean(tmax, na.rm = TRUE),
+    sd_tmax = sd(tmax, na.rm = TRUE),
+    median_prcp = median(prcp, na.rm = TRUE),
+  ) %>% 
+  ggplot(aes(x = month, y = mean_tmax, color = name)) +
+  geom_point() + geom_line()
+
+# you'll notice that waikiki has NA...
+weather_df %>% 
+  filter(is.na(tmax)) # now that we saw some NA, we can add na.rm = TRUE in prior code...
+
+```
+
+
+## revisiting "2x2" table...
+occasionally, your table won't look "pretty" for people and therefore may require pivot_wider...
+```{r}
+
+weather_df %>% 
+  group_by(name, month) %>% 
+  summarize(
+    mean_tmax = mean(tmax, na.rm = TRUE)
+    ) %>% 
+  pivot_wider(
+    names_from = name,
+    values_from = mean_tmax
+  )
+
+```
+
+## Grouped mutates
+**Warning**: this is a portion where grouping and forgetting can be troublesome...therefore there is a way to ungroup it...by using ungroup()
+
+```{r}
+# by having group_by prior to mutate, now mutate() applies to the assigned group.
+weather_df %>% 
+  group_by(name) %>% 
+  mutate(
+    mean_tmax = mean(tmax, na.rm = TRUE),
+    centered_tmax = tmax - mean_tmax
+  ) %>% 
+  ggplot(aes(x = date, y = centered_tmax, color = name)) +
+  geom_point()
+
+```
+
+## Occasionally..you'll need window functions in grouped mutates...
+
+```{r}
+
+# we can get a ranked order of something...and filter only by certain ranks...
+
+weather_df %>% 
+  group_by(name, month) %>% 
+  mutate(
+    tmax_rank = min_rank(tmax)
+  ) %>% 
+  filter(tmax_rank == 1)
+
+# lags and leads...
+
+#e.g. how much does tmax variable change by day
+# lagging/leading typically is used for predictive models based on "prior events".
+weather_df %>% 
+  group_by(name) %>%  # group by name b/c we want to be location specific
+  mutate(
+    lagged_tmax = lag(tmax),       # lag() is going to offset by one, 
+    one_day_tmax_change = tmax - lagged_tmax
+  ) %>% 
+  summarize(sd_daily_change = sd(one_day_tmax_change, na.rm = TRUE))
 
 ```
 
